@@ -131,9 +131,6 @@
     labels: [],
   };
 
-  // Point to your droplet’s API instead of localhost
-  var API_BASE = 'http://68.183.61.239:3000';
-
   function createChart() {
     var ctx = document.getElementById('myChart').getContext('2d');
     new Chart(ctx, { type: 'pie', data: dataSource });
@@ -141,13 +138,13 @@
 
   function getBudget() {
     axios
-      .get(API_BASE + '/budget')
+      .get('http://localhost:3000/budget')
       .then(function (res) {
         for (var i = 0; i < res.data.myBudget.length; i++) {
           dataSource.datasets[0].data[i] = res.data.myBudget[i].budget;
           dataSource.labels[i] = res.data.myBudget[i].title;
         }
-        createChart(); 
+        createChart();
       })
       .catch(function (err) {
         console.error('Budget fetch failed:', err);
@@ -156,6 +153,7 @@
 
   getBudget();
 </script>
+
 
 
 </body>

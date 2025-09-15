@@ -9,6 +9,8 @@ const port = 3000;
 
 app.use(cors());
 
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.get('/budget', (req, res) => {
   const file = path.join(__dirname, 'budget.json');
   fs.readFile(file, 'utf8', (err, text) => {

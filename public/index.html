@@ -29,6 +29,23 @@
 
 <a href="#main" class="skip">Skip to content</a>
 
+<!-- D3 donut demo styles -->
+<style>
+  #d3donut-wrap{
+    max-width: 580px;   
+    height: 360px;      
+    margin: 24px auto;  
+    position: relative;
+  }
+  #d3donut-wrap svg{ width:100%; height:100%; }
+  path.slice{ stroke-width:2px; }
+  .lines polyline{ opacity:.3; stroke:#000; stroke-width:2px; fill:none; }
+  .labels text{ font: 12px "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  #randomize{ margin: 0 auto 12px; display:block; }
+</style>
+
+
+
 <!-- This is a Semantic HTML Change -->
 <!-- This is an A11y Change-->
 <nav aria-label="Primary">
@@ -91,12 +108,26 @@
                 This app is free!!! And you are the only one holding your data!
             </p>
         </article>
+        <!-- This is a Semantic HTML Change -->
+        <article>
+            <h3>D3 Bar Chart</h3>
+                <div id="d3chart" role="img" aria-label="Bar chart of budget categories"></div>
+        </article>
+
+        <article>
+            <h3>D3 Donut Chart</h3>
+                <button id="randomize" type="button">Randomize</button>
+                 <div id="d3donut-wrap" role="img" aria-label="Donut chart of budget categories"></div>
+        </article>
+
+
 
         <article>
             <!-- This is a Semantic HTML Change -->
             <h3>Chart</h3>
 
             <!-- This is an A11y Change -->
+             
             <figure>
                 <!-- This is an A11y Change  -->
                 <canvas id="myChart" width="400" height="400" role="img" aria-describedby="chart-desc"></canvas>
@@ -119,6 +150,8 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.20.0/axios.min.js" integrity="sha512-quHCp3WbBNkwLfYUMd+KwBAgpVukJu5MncuQaWXgCrfgcxCJAq/fo+oqrRKOj+UKEmyMCG3tb8RB63W+EmrOBg==" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js" integrity="sha512-s+xg36jbIujB2S2VKfpGmlC3T5V2TF3lY48DX7u2r9XzGzgPsa6wTpOQA7J9iffvdeBN0q9tKzRxVxw1JviZPg==" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" crossorigin="anonymous"></script>
+
 
 <script>
   var dataSource = {
@@ -154,6 +187,140 @@
   getBudget();
 </script>
 
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script>
+(function () {
+  var el     = d3.select('#d3donut-wrap'),
+      width  = 1260,
+      height = 750,
+      radius = Math.min(width, height) / 2;
+
+  var svg = el.append('svg')
+      .attr('viewBox', '0 0 ' + width + ' ' + height)
+      .append('g')
+      .attr('transform', 'translate(' + (width/2) + ',' + (height/2) + ')');
+
+  svg.append('g').attr('class', 'slices');
+  svg.append('g').attr('class', 'labels');
+  svg.append('g').attr('class', 'lines');
+
+  var color = d3.scale.ordinal()
+    .domain(['Eat out','Rent','Grocery','Utilities','Transport','Savings','Fun'])
+    .range(['#98abc5','#8a89a6','#7b6888','#6b486b','#a05d56','#d0743c','#ff8c00']);
+
+  var pie = d3.layout.pie()
+    .sort(null)
+    .value(function(d){ return d.value; });
+
+
+  var arc = d3.svg.arc()
+    .outerRadius(radius * 0.8)
+    .innerRadius(radius * 0.4);  
+
+  var outerArc = d3.svg.arc()
+    .innerRadius(radius * 0.9)
+    .outerRadius(radius * 0.9);
+
+    var fmt = d3.format(".0f");
+
+  function midAngle(d){ return d.startAngle + (d.endAngle - d.startAngle)/2; }
+  function key(d){ return d.data.label; }
+
+  function draw(data) {
+
+    var slice = svg.select('.slices').selectAll('path.slice')
+      .data(pie(data), key);
+
+    slice.enter().append('path')
+      .attr('class','slice')
+      .style('fill', function(d){ return color(d.data.label); });
+
+    slice.transition().duration(1000)
+      .attrTween('d', function(d){
+        this._current = this._current || d;
+        var i = d3.interpolate(this._current, d);
+        this._current = i(0);
+        return function(t){ return arc(i(t)); };
+      });
+
+    slice.exit().remove();
+
+
+    var text = svg.select('.labels').selectAll('text')
+      .data(pie(data), key);
+
+    text.enter().append('text').attr('dy', '.35em');
+
+    text.text(function(d){ return d.data.label + ' (' + fmt(d.data.value) + ')'; })
+      .transition().duration(1000)
+      .attrTween('transform', function(d){
+        this._current = this._current || d;
+        var i = d3.interpolate(this._current, d);
+        this._current = i(0);
+        return function(t){
+          var d2 = i(t), pos = outerArc.centroid(d2);
+          pos[0] = radius * (midAngle(d2) < Math.PI ? 1 : -1);
+          return 'translate(' + pos + ')';
+        };
+      })
+      .styleTween('text-anchor', function(d){
+        this._current = this._current || d;
+        var i = d3.interpolate(this._current, d);
+        this._current = i(0);
+        return function(t){
+          var d2 = i(t);
+          return midAngle(d2) < Math.PI ? 'start' : 'end';
+        };
+      });
+
+    text.exit().remove();
+
+ 
+    var polyline = svg.select('.lines').selectAll('polyline')
+      .data(pie(data), key);
+
+    polyline.enter().append('polyline');
+
+    polyline.transition().duration(1000)
+      .attrTween('points', function(d){
+        this._current = this._current || d;
+        var i = d3.interpolate(this._current, d);
+        this._current = i(0);
+        return function(t){
+          var d2  = i(t),
+              pos = outerArc.centroid(d2);
+          pos[0] = radius * 0.95 * (midAngle(d2) < Math.PI ? 1 : -1);
+          return [arc.centroid(d2), outerArc.centroid(d2), pos];
+        };
+      });
+
+    polyline.exit().remove();
+  }
+
+  
+  function loadRealData(cb){
+    d3.json('http://localhost:3000/budget', function(err, json){
+      if (err) { console.error('D3 load failed:', err); return; }
+      var data = json.myBudget.map(function(d){
+        return { label: d.title, value: +d.budget };
+      });
+      cb(data);
+    });
+  }
+
+
+  function randomize(data){
+    return data.map(function(d){
+      return { label: d.label, value: Math.max(1, d.value * (0.6 + Math.random()*0.8)) };
+    });
+  }
+
+  loadRealData(function(data){
+    draw(data);
+    d3.select('#randomize').on('click', function(){ draw(randomize(data)); });
+  });
+})();
+</script>
 
 
 </body>
